@@ -23,6 +23,9 @@ public class Products {
     @Column(name = "productVendor")
     private String productVendor;
 
+    @Column(name = "productScale")
+    private String productScale;
+
     @Column(name = "quantityInStock")
     private int quantityInStock;
 

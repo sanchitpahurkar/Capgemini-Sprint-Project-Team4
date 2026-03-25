@@ -2,6 +2,9 @@ package com.example.DemoCheck.repository;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +34,7 @@ public class ProductsRepositoryTest {
         p.setMSRP(65);
 
         productRepository.save(p);
+        // productRepository.flush(); // blocks LAZY write by hibernate
 
         Products saved = productRepository.findById("S10_89876").get();
 
@@ -42,6 +46,5 @@ public class ProductsRepositoryTest {
         assertEquals(10, saved.getQuantityInStock());
         assertEquals(60, saved.getBuyPrice());
         assertEquals(65, saved.getMSRP());
-        
     }
 }
