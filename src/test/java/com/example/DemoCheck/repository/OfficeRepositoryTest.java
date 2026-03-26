@@ -5,11 +5,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -18,12 +18,52 @@ class OfficeRepositoryTest {
     @Autowired
     private OfficeRepository officeRepository;
 
+    private Office createOffice(
+            String officeCode,
+            String city,
+            String phone,
+            String addressLine1,
+            String addressLine2,
+            String state,
+            String country,
+            String postalCode,
+            String territory
+    ) {
+        return new Office(
+                officeCode,
+                city,
+                phone,
+                addressLine1,
+                addressLine2,
+                state,
+                country,
+                postalCode,
+                territory
+        );
+    }
+
     @Test
     void findAll_shouldReturnData() {
-
+        officeRepository.saveAll(List.of(
+                createOffice("T01", "Paris", "1111111111", "A1", "A2", "State1", "France", "75001", "EMEA"),
+                createOffice("T02", "London", "2222222222", "B1", "B2", "State2", "UK", "EC1A", "EMEA")
+        ));
         List<Office> offices = officeRepository.findAll();
 
         assertNotNull(offices);
         assertFalse(offices.isEmpty());
+    }
+
+    @Test
+    void findByCityIn_shouldReturnEmptyList_whenCitiesDoNotExist() {
+        officeRepository.saveAll(List.of(
+                createOffice("T21", "AlphaCity", "1111111111", "A1", "A2", "S1", "India", "440001", "APAC"),
+                createOffice("T22", "BetaCity", "2222222222", "B1", "B2", "S2", "India", "440002", "APAC")
+        ));
+
+        List<Office> offices = officeRepository.findByCityIn(List.of("NoSuchCity1", "NoSuchCity2"));
+
+        assertNotNull(offices);
+        assertTrue(offices.isEmpty());
     }
 }
