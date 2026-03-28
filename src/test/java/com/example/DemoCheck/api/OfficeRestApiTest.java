@@ -294,4 +294,146 @@ class OfficeRestApiTest {
                 .andExpect(jsonPath("$.page.number").value(5));
 
     }
+
+    //pass
+    @Test
+    void filterByCityWithPagination_shouldReturnMatchingOffices() throws Exception {
+        officeRepository.save(createOffice("C101", "TestCity_X", "1111111111",
+                "A1", "A2", "State1", "India", "400001", "APAC"));
+        officeRepository.save(createOffice("C102", "TestCity_X", "2222222222",
+                "B1", "B2", "State2", "India", "400002", "APAC"));
+        officeRepository.save(createOffice("C103", "OtherCity_X", "3333333333",
+                "C1", "C2", "State3", "India", "400003", "EMEA"));
+
+        mockMvc.perform(get("/offices/search/by-city")
+                        .param("city", "TestCity_X")
+                        .param("projection","officeList")
+                        .param("page", "0")
+                        .param("size", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$._embedded.offices.length()").value(2))
+                .andExpect(jsonPath("$.page.size").value(2))
+                .andExpect(jsonPath("$.page.number").value(0));
+    }
+    //fail
+    @Test
+    void filterByCityWithPagination_shouldReturnEmpty_whenCityDoesNotExist() throws Exception {
+        officeRepository.save(createOffice("NC101", "RealCity_X", "1111111111",
+                "A1", "A2", "State1", "India", "400001", "APAC"));
+
+        mockMvc.perform(get("/offices/search/by-city")
+                        .param("city", "NoSuchCity_999")
+                        .param("projection","officeList")
+                        .param("page", "0")
+                        .param("size", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.page.size").value(2))
+                .andExpect(jsonPath("$.page.number").value(0));
+    }
+
+    //pass
+    @Test
+    void filterByStateWithPagination_shouldReturnMatchingOffices() throws Exception {
+        officeRepository.save(createOffice("S101", "City1", "1111111111",
+                "A1", "A2", "TestState_X", "India", "400001", "APAC"));
+        officeRepository.save(createOffice("S102", "City2", "2222222222",
+                "B1", "B2", "TestState_X", "India", "400002", "APAC"));
+        officeRepository.save(createOffice("S103", "City3", "3333333333",
+                "C1", "C2", "OtherState_X", "India", "400003", "EMEA"));
+
+        mockMvc.perform(get("/offices/search/by-state")
+                        .param("state", "TestState_X")
+                        .param("projection","officeList")
+                        .param("page", "0")
+                        .param("size", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$._embedded.offices").exists())
+                .andExpect(jsonPath("$.page.size").value(2))
+                .andExpect(jsonPath("$.page.number").value(0));
+    }
+    //fail
+    @Test
+    void filterByStateWithPagination_shouldReturnEmpty_whenStateDoesNotExist() throws Exception {
+        officeRepository.save(createOffice("NS101", "City1", "1111111111",
+                "A1", "A2", "RealState_X", "India", "400001", "APAC"));
+
+        mockMvc.perform(get("/offices/search/by-state")
+                        .param("state", "NoSuchState_999")
+                        .param("projection","officeList")
+                        .param("page", "0")
+                        .param("size", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.page.size").value(2))
+                .andExpect(jsonPath("$.page.number").value(0));
+    }
+
+    //Pass
+    @Test
+    void filterByCountryWithPagination_shouldReturnMatchingOffices() throws Exception {
+        officeRepository.save(createOffice("CO101", "City1", "1111111111",
+                "A1", "A2", "State1", "TestCountry_X", "400001", "APAC"));
+        officeRepository.save(createOffice("CO102", "City2", "2222222222",
+                "B1", "B2", "TestCountry_X", "400002", "EMEA","EMEA"));
+        officeRepository.save(createOffice("CO103", "City3", "3333333333",
+                "C1", "C2", "State3", "OtherCountry_X", "400003", "EMEA"));
+
+        mockMvc.perform(get("/offices/search/by-country")
+                        .param("country", "TestCountry_X")
+                        .param("projection","officeList")
+                        .param("page", "0")
+                        .param("size", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$._embedded.offices").exists())
+                .andExpect(jsonPath("$.page.size").value(2))
+                .andExpect(jsonPath("$.page.number").value(0));
+    }
+    //fail
+    @Test
+    void filterByCountryWithPagination_shouldReturnEmpty_whenCountryDoesNotExist() throws Exception {
+        officeRepository.save(createOffice("NCO101", "City1", "1111111111",
+                "A1", "A2", "State1", "RealCountry_X", "400001", "APAC"));
+
+        mockMvc.perform(get("/offices/search/by-country")
+                        .param("country", "NoSuchCountry_999")
+                        .param("projection","officeList")
+                        .param("page", "0")
+                        .param("size", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.page.size").value(2))
+                .andExpect(jsonPath("$.page.number").value(0));
+    }
+
+    //pass
+    @Test
+    void filterByTerritoryWithPagination_shouldReturnMatchingOffices() throws Exception {
+        officeRepository.save(createOffice("TT901", "City1", "1111111111",
+                "A1", "A2", "State1", "India", "400001", "TEST_TER_X"));
+        officeRepository.save(createOffice("TT902", "City2", "2222222222",
+                "B1", "B2", "State2", "India", "400002", "TEST_TER_X"));
+        officeRepository.save(createOffice("TT903", "City3", "3333333333",
+                "C1", "C2", "State3", "India", "400003", "OTHERTERX"));
+
+        mockMvc.perform(get("/offices/search/by-territory")
+                        .param("territory", "TEST_TER_X")
+                        .param("projection","officeList")
+                        .param("page", "0")
+                        .param("size", "2"))
+                .andDo(print())
+                .andExpect(status().isOk());
+    }
+    //fail
+    @Test
+    void filterByTerritoryWithPagination_shouldReturnEmpty_whenTerritoryDoesNotExist() throws Exception {
+        officeRepository.save(createOffice("NT101", "City1", "1111111111",
+                "A1", "A2", "State1", "India", "400001", "REALTER_X"));
+
+        mockMvc.perform(get("/offices/search/by-territory")
+                        .param("territory", "NO_TER_9")
+                        .param("projection","officeList")
+                        .param("page", "0")
+                        .param("size", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.page.size").value(2))
+                .andExpect(jsonPath("$.page.number").value(0));
+    }
 }
