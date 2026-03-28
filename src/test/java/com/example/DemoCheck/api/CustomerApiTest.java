@@ -6,6 +6,7 @@ import com.example.DemoCheck.entity.Office;
 import com.example.DemoCheck.repository.CustomerRepository;
 import com.example.DemoCheck.repository.EmployeeRepository;
 import com.example.DemoCheck.repository.OfficeRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -16,8 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -38,6 +39,10 @@ class CustomerApiTest {
     @Autowired
     private OfficeRepository officeRepository;
     //Helper method
+    private int generateId() {
+        return (int) (System.nanoTime() % 1000000) + 1000000;
+    }
+
     private Customer createCustomer(int id, String name, String city) {
         Customer c = new Customer();
         c.setCustomerNumber(id);
@@ -46,17 +51,12 @@ class CustomerApiTest {
         c.setContactFirstName("John");
         c.setPhone("1234567890");
         c.setAddressLine1("Addr1");
-        c.setAddressLine2(null);
         c.setCity(city);
-        c.setState("MH");
-        c.setPostalCode("411001");
         c.setCountry("India");
         c.setCreditLimit(new BigDecimal("10000"));
-        c.setSalesRepEmployee(null);
         return c;
     }
 
-    //helper method
     private Employee createEmployee() {
 
         Office office = new Office();
@@ -78,224 +78,13 @@ class CustomerApiTest {
         e.setEmail("john@test.com");
         e.setOffice(office);
         e.setJobTitle("Manager");
+
         return employeeRepository.save(e);
-    }
-
-    private int generateId() {
-        return (int) (System.nanoTime() % 1000000);
-    }
-
-    @Test
-    void testGetCustomerById() throws Exception {
-
-        // Arrange
-        int baseId = generateId();
-
-        Customer c = createCustomer(baseId, "Single Customer", "Mumbai");
-        customerRepository.save(c);
-
-        var request = get("/customer/" + baseId);
-
-        // Act
-        var result = mockMvc.perform(request);
-
-        // Assert
-        result.andExpect(status().isOk())
-                .andExpect(jsonPath("$.customerName").value("Single Customer"));
-    }
-
-    @Test
-    void testGetCustomerByInvalidId() throws Exception {
-
-        // Arrange
-        int invalidId = 99999999;
-
-        var request = get("/customer/" + invalidId);
-
-        // Act
-        var result = mockMvc.perform(request);
-
-        // Assert
-        result.andExpect(status().isNotFound());
-    }
-
-    @Test
-    void testGetCustomerWithInvalidIdFormat() throws Exception {
-
-        // Arrange
-        var request = get("/customer/abc");
-
-        // Act
-        var result = mockMvc.perform(request);
-
-        // Assert
-        result.andExpect(status().isBadRequest());
-    }
-
-
-    @Test
-    void testGetAllCustomers() throws Exception {
-
-        // Arrange
-        int baseId = generateId();
-
-        Customer c1 = createCustomer(baseId, "ABC Corp", "Pune");
-
-        customerRepository.save(c1);
-
-        var request = get("/customer");
-
-        // Act
-        var result = mockMvc.perform(request);
-
-        // Assert
-        result.andExpect(status().isOk())
-                .andExpect(jsonPath("$._embedded.customers[*].customerName")
-                        .value(org.hamcrest.Matchers.hasItem("ABC Corp")));
-    }
-
-    @Test
-    void testPaginationApi() throws Exception {
-
-        // Arrange
-        int pageSize = 12;
-        var request = get("/customer")
-                .param("page", "0")
-                .param("size", String.valueOf(pageSize));
-
-        // Act
-        var result = mockMvc.perform(request);
-
-        // Assert
-        result.andExpect(status().isOk())
-                .andExpect(jsonPath("$.page.size").value(pageSize))
-                .andExpect(jsonPath("$.page.totalElements").exists())
-                .andExpect(jsonPath("$._embedded.customers").isArray());
-    }
-
-    @Test
-    void testPaginationOutOfBounds() throws Exception {
-
-        // Arrange
-        var request = get("/customer")
-                .param("page", "1000")
-                .param("size", "12");
-
-        // Act
-        var result = mockMvc.perform(request);
-
-        // Assert
-        result.andExpect(status().isOk())
-                .andExpect(jsonPath("$._embedded.customers").isEmpty());
-    }
-
-    @Test
-    void testProjectionFields() throws Exception {
-
-        // Arrange
-        int baseId = generateId();
-
-        Customer c1 = createCustomer(baseId, "Proj Corp", "Pune");
-
-        customerRepository.save(c1);
-
-        var request = get("/customer")
-                .param("projection", "customerView")
-                .param("page", "0")
-                .param("size", "1");
-
-        // Act
-        var result = mockMvc.perform(request);
-
-        // Assert
-        result.andExpect(status().isOk())
-                .andExpect(jsonPath("$._embedded.customers[0].contactName").exists())
-                .andExpect(jsonPath("$._embedded.customers[0].address").exists());
-    }
-
-    @Test
-    void testGetCustomerByIdWithProjection() throws Exception {
-
-        // Arrange
-        int baseId = generateId();
-
-        Customer c = createCustomer(baseId, "Projected Customer", "Delhi");
-        customerRepository.save(c);
-
-        var request = get("/customer/" + baseId)
-                .param("projection", "customerView");
-
-        // Act
-        var result = mockMvc.perform(request);
-
-        // Assert
-        result.andExpect(status().isOk())
-                .andExpect(jsonPath("$.contactName").exists())
-                .andExpect(jsonPath("$.address").exists());
-    }
-
-    @Test
-    void testSearchApi() throws Exception {
-
-        // Arrange
-        int baseId = generateId();
-
-        Customer c1 = createCustomer(baseId, "SearchTest Corp", "Pune");
-
-        customerRepository.save(c1);
-
-        var request = get("/customer/search/findCustomers")
-                .param("keyword", "SearchTest")
-                .param("page", "0")
-                .param("size", "12");
-
-        // Act
-        var result = mockMvc.perform(request);
-
-        // Assert
-        result.andExpect(status().isOk())
-                .andExpect(jsonPath("$._embedded.customers[*].customerName")
-                        .value(org.hamcrest.Matchers.hasItem("SearchTest Corp")));
-    }
-
-    @Test
-    void testSearchNoResults() throws Exception {
-
-        // Arrange
-        var request = get("/customer/search/findCustomers")
-                .param("keyword", "XYZ_NOT_FOUND")
-                .param("page", "0")
-                .param("size", "12");
-
-        // Act
-        var result = mockMvc.perform(request);
-
-        // Assert
-        result.andExpect(status().isOk())
-                .andExpect(jsonPath("$._embedded.customers").isEmpty());
-    }
-
-
-
-    @Test
-    void testSearchWithEmptyKeyword() throws Exception {
-
-        // Arrange
-        var request = get("/customer/search/findCustomers")
-                .param("keyword", "")
-                .param("page", "0")
-                .param("size", "12");
-
-        // Act
-        var result = mockMvc.perform(request);
-
-        // Assert
-        result.andExpect(status().isOk())
-                .andExpect(jsonPath("$._embedded.customers").isArray());
     }
 
     private String validCustomerJson(Integer employeeId) {
         int customerId = generateId();
+
         String employeePart = (employeeId != null)
                 ? "\"salesRepEmployee\": \"/employees/" + employeeId + "\""
                 : "";
@@ -317,26 +106,210 @@ class CustomerApiTest {
                 employeePart.isEmpty() ? "" : "," + employeePart);
     }
 
+    // ---------------- GET TESTS ----------------
+
+    @Test
+    void testGetCustomerById() throws Exception {
+        int id = generateId();
+        customerRepository.save(createCustomer(id, "Single Customer", "Mumbai"));
+
+        mockMvc.perform(get("/customer/" + id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.customerName").value("Single Customer"));
+    }
+
+    @Test
+    void testGetCustomerByInvalidId() throws Exception {
+        mockMvc.perform(get("/customer/99999999"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Customer not found"));
+    }
+
+    @Test
+    void testInvalidIdFormat() throws Exception {
+        mockMvc.perform(get("/customer/abc"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message")
+                        .value("Invalid ID format. ID must be a number."));
+    }
+
+    @Test
+    void testGetAllCustomers() throws Exception {
+        int id = generateId();
+        customerRepository.save(createCustomer(id, "ABC Corp", "Pune"));
+
+        mockMvc.perform(get("/customer"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$._embedded.customers").isArray())
+                .andExpect(jsonPath("$._embedded.customers[*].customerName")
+                        .value(org.hamcrest.Matchers.hasItem("ABC Corp")));
+    }
+
+    // ---------------- PAGINATION ----------------
+
+    void testPagination() throws Exception {
+        mockMvc.perform(get("/customer")
+                        .param("page", "0")
+                        .param("size", "5"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.page.size").value(5))
+                .andExpect(jsonPath("$.page.totalElements").exists());
+    }
+
+    @Test
+    void testPaginationOutOfBounds() throws Exception {
+        mockMvc.perform(get("/customer")
+                        .param("page", "999")
+                        .param("size", "5"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$._embedded.customers").isEmpty());
+    }
+
+    // ---------------- PROJECTION ----------------
+
+    @Test
+    void testProjectionFields() throws Exception {
+
+        int baseId = generateId();
+
+        Customer c = createCustomer(baseId, "Proj Corp", "Pune");
+        customerRepository.save(c);
+
+        mockMvc.perform(get("/customer")
+                        .param("projection", "customerView")
+                        .param("size", "200")) // 🔥 FIX
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$._embedded.customers").isArray())
+                .andExpect(jsonPath("$._embedded.customers[*].customerName")
+                        .value(org.hamcrest.Matchers.hasItem("Proj Corp")))
+                .andExpect(jsonPath("$._embedded.customers[*].contactName")
+                        .value(org.hamcrest.Matchers.hasItem("John Smith")))
+                .andExpect(jsonPath("$._embedded.customers[*].address")
+                        .value(org.hamcrest.Matchers.hasItem("Addr1")))
+                .andExpect(jsonPath("$._embedded.customers[*].city")
+                        .value(org.hamcrest.Matchers.hasItem("Pune")))
+                .andExpect(jsonPath("$._embedded.customers[*].country")
+                        .value(org.hamcrest.Matchers.hasItem("India")));
+    }
+
+    @Test
+    void testGetCustomerByIdWithProjection() throws Exception {
+
+        int baseId = generateId();
+
+        Customer c = createCustomer(baseId, "Projected Customer", "Delhi");
+        customerRepository.save(c);
+
+        mockMvc.perform(get("/customer/" + baseId)
+                        .param("projection", "customerView"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.customerName")
+                        .value("Projected Customer"))
+                .andExpect(jsonPath("$.contactName")
+                        .value("John Smith"))
+                .andExpect(jsonPath("$.address")
+                        .value("Addr1"))
+                .andExpect(jsonPath("$.city")
+                        .value("Delhi"));
+    }
+
+    // ---------------- SEARCH ----------------
+
+    @Test
+    void testSearchApi() throws Exception {
+
+        int baseId = generateId();
+        customerRepository.save(createCustomer(baseId, "SearchTest Corp", "Pune"));
+
+        mockMvc.perform(get("/customer/search/findCustomers")
+                        .param("keyword", "SearchTest")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$._embedded.customers").isArray())
+                .andExpect(jsonPath("$._embedded.customers[*].customerName")
+                        .value(org.hamcrest.Matchers.hasItem("SearchTest Corp")))
+                .andExpect(jsonPath("$.page.size").value(10));
+    }
+
+    @Test
+    void testSearchNoResults() throws Exception {
+
+        mockMvc.perform(get("/customer/search/findCustomers")
+                        .param("keyword", "XYZ_NOT_FOUND")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$._embedded.customers").isEmpty())
+                .andExpect(jsonPath("$.page.totalElements").value(0));
+    }
+
+
+
+    @Test
+    void testSearchWithEmptyKeyword() throws Exception {
+
+        int baseId = generateId();
+        customerRepository.save(createCustomer(baseId, "Tech Corp", "Nagpur"));
+
+        mockMvc.perform(get("/customer/search/findCustomers")
+                        .param("keyword", "")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$._embedded.customers").isNotEmpty());
+    }
+
+    @Test
+    void testSearchByCityApi() throws Exception {
+
+        int baseId = generateId();
+        customerRepository.save(createCustomer(baseId, "City Corp", "Nagpur"));
+
+        mockMvc.perform(get("/customer/search/findCustomers")
+                        .param("keyword", "Nagpur"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$._embedded.customers").isNotEmpty());
+    }
+
+    @Test
+    void testSearchPaginationLimit() throws Exception {
+
+        int baseId = generateId();
+
+        for (int i = 0; i < 10; i++) {
+            customerRepository.save(createCustomer(baseId + i, "Tech " + i, "City"));
+        }
+
+        mockMvc.perform(get("/customer/search/findCustomers")
+                        .param("keyword", "Tech")
+                        .param("size", "5"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$._embedded.customers.length()").value(5));
+    }
+
+    // ---------------- POST ----------------
+
     @Test
     void shouldCreateCustomerSuccessfully() throws Exception {
 
         Employee emp = createEmployee();
-
         String json = validCustomerJson(emp.getEmployeeNumber());
 
         mockMvc.perform(post("/customer")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
                 .andExpect(status().isCreated());
+
+        //Verify persisted
+        assertThat(customerRepository.findAll()).isNotEmpty();
     }
 
     @Test
     void shouldCreateCustomerWithoutEmployee() throws Exception {
 
-        // Arrange
         String json = validCustomerJson(null);
 
-        // Act + Assert
         mockMvc.perform(post("/customer")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
@@ -361,74 +334,80 @@ class CustomerApiTest {
 
     @Test
     void shouldFailWhenCustomerNameMissing() throws Exception {
-        int customerId = generateId();
-        // Arrange
-        String json = """
-        {
-          "customerNumber": %d,
-          "contactLastName": "Doe",
-          "contactFirstName": "John",
-          "phone": "1234567890",
-          "addressLine1": "Street 1",
-          "city": "Nagpur",
-          "country": "India"
-        }
-        """.formatted(customerId);
 
-        // Act + Assert
+        int id = generateId();
+
+        String json = """
+    {
+      "customerNumber": %d,
+      "contactLastName": "Doe",
+      "contactFirstName": "John",
+      "phone": "1234567890",
+      "addressLine1": "Street 1",
+      "city": "Nagpur",
+      "country": "India"
+    }
+    """.formatted(id);
+
         mockMvc.perform(post("/customer")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message")
+                        .value("customerName cannot be blank"));
     }
 
     @Test
     void shouldFailWhenPhoneInvalid() throws Exception {
 
-        // Arrange
-        String json = """
-        {
-          "customerNumber": 9004,
-          "customerName": "Invalid Phone Corp",
-          "contactLastName": "Doe",
-          "contactFirstName": "John",
-          "phone": "abc123",
-          "addressLine1": "Street 1",
-          "city": "Nagpur",
-          "country": "India"
-        }
-        """;
+        int id = generateId();
 
-        // Act + Assert
+        String json = """
+    {
+      "customerNumber": %d,
+      "customerName": "Invalid Phone Corp",
+      "contactLastName": "Doe",
+      "contactFirstName": "John",
+      "phone": "abc123",
+      "addressLine1": "Street 1",
+      "city": "Nagpur",
+      "country": "India"
+    }
+    """.formatted(id);
+
         mockMvc.perform(post("/customer")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message")
+                        .value("phone must be exactly 10 digits"));
     }
 
     @Test
     void shouldFailWhenCreditLimitNegative() throws Exception {
 
-        // Arrange
-        String json = """
-        {
-          "customerNumber": 9005,
-          "customerName": "Negative Credit Corp",
-          "contactLastName": "Doe",
-          "contactFirstName": "John",
-          "phone": "1234567890",
-          "addressLine1": "Street 1",
-          "city": "Nagpur",
-          "country": "India",
-          "creditLimit": -5000
-        }
-        """;
+        int id = generateId();
 
-        // Act + Assert
+        String json = """
+    {
+      "customerNumber": %d,
+      "customerName": "Negative Credit Corp",
+      "contactLastName": "Doe",
+      "contactFirstName": "John",
+      "phone": "1234567890",
+      "addressLine1": "Street 1",
+      "city": "Nagpur",
+      "country": "India",
+      "creditLimit": -5000
+    }
+    """.formatted(id);
+
         mockMvc.perform(post("/customer")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message")
+                        .value("creditLimit cannot be negative"));
     }
 
     @Test
@@ -459,53 +438,417 @@ class CustomerApiTest {
         mockMvc.perform(post("/customer")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message")
+                        .value("Customer already exists with id: " + id));
     }
 
     @Test
     void shouldFailWhenCustomerNameBlank() throws Exception {
 
-        // Arrange
-        String json = """
-        {
-          "customerNumber": 9007,
-          "customerName": "",
-          "contactLastName": "Doe",
-          "contactFirstName": "John",
-          "phone": "1234567890",
-          "addressLine1": "Street 1",
-          "city": "Nagpur",
-          "country": "India"
-        }
-        """;
+        int id = generateId();
 
-        // Act + Assert
+        String json = """
+    {
+      "customerNumber": %d,
+      "customerName": "",
+      "contactLastName": "Doe",
+      "contactFirstName": "John",
+      "phone": "1234567890",
+      "addressLine1": "Street 1",
+      "city": "Nagpur",
+      "country": "India"
+    }
+    """.formatted(id);
+
+        mockMvc.perform(post("/customer")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message")
+                        .value("customerName cannot be blank"));
+    }
+
+    @Test
+    void shouldFailWhenCustomerNumberNull() throws Exception {
+
+        String json = """
+    {
+      "customerName": "Null ID Corp",
+      "contactLastName": "Doe",
+      "contactFirstName": "John",
+      "phone": "1234567890",
+      "addressLine1": "Street 1",
+      "city": "Nagpur",
+      "country": "India"
+    }
+    """;
+
+        mockMvc.perform(post("/customer")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message")
+                        .value("customerNumber cannot be null"));
+    }
+
+    @Test
+    void shouldFailWhenPostalCodeInvalid() throws Exception {
+        int id = generateId();
+
+        String json = """
+    {
+      "customerNumber": %d,
+      "customerName": "Bad Postal",
+      "contactLastName": "Doe",
+      "contactFirstName": "John",
+      "phone": "1234567890",
+      "addressLine1": "Street 1",
+      "city": "Nagpur",
+      "country": "India",
+      "postalCode": "123"
+    }
+    """.formatted(id);
+
         mockMvc.perform(post("/customer")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
                 .andExpect(status().isBadRequest());
     }
 
+    // ---------------- PATCH ----------------
+
     @Test
-    void shouldFailWhenCustomerNumberNull() throws Exception {
+    void shouldUpdateCustomerNameSuccessfully() throws Exception {
 
-        // Arrange
+        int id = generateId();
+        customerRepository.save(createCustomer(id, "Old Name", "Nagpur"));
+
+        String patchJson = """
+    {
+      "customerName": "Updated Name"
+    }
+    """;
+
+        mockMvc.perform(patch("/customer/" + id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(patchJson))
+                .andExpect(status().isNoContent()); // ✅ FIX
+
+        Customer updated = customerRepository.findById(id).orElseThrow();
+        assertThat(updated.getCustomerName()).isEqualTo("Updated Name");
+    }
+
+    @Test
+    void shouldUpdateAddressFields() throws Exception {
+
+        int id = generateId();
+        customerRepository.save(createCustomer(id, "Address Corp", "Mumbai"));
+
         String json = """
-        {
-          "customerName": "Null ID Corp",
-          "contactLastName": "Doe",
-          "contactFirstName": "John",
-          "phone": "1234567890",
-          "addressLine1": "Street 1",
-          "city": "Nagpur",
-          "country": "India"
-        }
-        """;
+    {
+      "addressLine1": "New Address",
+      "city": "Pune"
+    }
+    """;
 
-        // Act + Assert
-        mockMvc.perform(post("/customer")
+        mockMvc.perform(patch("/customer/" + id)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isNoContent()); // ✅ FIX
+
+        Customer updated = customerRepository.findById(id).orElseThrow();
+
+        assertThat(updated.getAddressLine1()).isEqualTo("New Address");
+        assertThat(updated.getCity()).isEqualTo("Pune");
+    }
+
+    @Test
+    void shouldUpdateContactName() throws Exception {
+
+        int id = generateId();
+        customerRepository.save(createCustomer(id, "Contact Corp", "Mumbai"));
+
+        String json = """
+    {
+      "contactFirstName": "Jane",
+      "contactLastName": "Doe"
+    }
+    """;
+
+        mockMvc.perform(patch("/customer/" + id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isNoContent()); // ✅ 204
+
+        Customer updated = customerRepository.findById(id).orElseThrow();
+
+        assertThat(updated.getContactFirstName()).isEqualTo("Jane");
+        assertThat(updated.getContactLastName()).isEqualTo("Doe");
+    }
+
+    @Test
+    void shouldTrimCustomerNameOnUpdate() throws Exception {
+
+        int id = generateId();
+        customerRepository.save(createCustomer(id, "Old Name", "Nagpur"));
+
+        String json = """
+    {
+      "customerName": "   Trimmed Name   "
+    }
+    """;
+
+        mockMvc.perform(patch("/customer/" + id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isNoContent()); // ✅ 204
+
+        Customer updated = customerRepository.findById(id).orElseThrow();
+
+        assertThat(updated.getCustomerName()).isEqualTo("Trimmed Name");
+    }
+
+    @Test
+    void shouldUpdateOnlyCityAndKeepOtherFieldsUnchanged() throws Exception {
+
+        int id = generateId();
+        Customer c = createCustomer(id, "Test Corp", "Nagpur");
+        customerRepository.save(c);
+
+        String patchJson = """
+    {
+      "city": "Mumbai"
+    }
+    """;
+
+        mockMvc.perform(patch("/customer/" + id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(patchJson))
+                .andExpect(status().isNoContent()); // ✅ 204
+
+        Customer updated = customerRepository.findById(id).orElseThrow();
+
+        assertThat(updated.getCity()).isEqualTo("Mumbai");
+        assertThat(updated.getCustomerName()).isEqualTo("Test Corp"); // unchanged
+    }
+
+    @Test
+    void shouldUpdateMultipleFields() throws Exception {
+
+        int id = generateId();
+        customerRepository.save(createCustomer(id, "Old Corp", "Nagpur"));
+
+        String patchJson = """
+    {
+      "customerName": "New Corp",
+      "city": "Pune",
+      "creditLimit": 20000
+    }
+    """;
+
+        mockMvc.perform(patch("/customer/" + id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(patchJson))
+                .andExpect(status().isNoContent()); // ✅ FIX
+
+        Customer updated = customerRepository.findById(id).orElseThrow();
+
+        assertThat(updated.getCustomerName()).isEqualTo("New Corp");
+        assertThat(updated.getCity()).isEqualTo("Pune");
+        assertThat(updated.getCreditLimit()).isEqualTo(new BigDecimal("20000"));
+    }
+
+    @Test
+    void shouldAllowNullOptionalField() throws Exception {
+
+        int id = generateId();
+        Customer c = createCustomer(id, "Null Test", "Mumbai");
+        c.setAddressLine2("Some Value");
+        customerRepository.save(c);
+
+        String json = """
+    {
+      "addressLine2": null
+    }
+    """;
+
+        mockMvc.perform(patch("/customer/" + id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isNoContent()); // ✅ FIX
+
+        Customer updated = customerRepository.findById(id).orElseThrow();
+
+        assertThat(updated.getAddressLine2()).isNull();
+    }
+
+    @Test
+    void shouldFailWhenCustomerNameBlankOnUpdate() throws Exception {
+
+        int id = generateId();
+        Customer c = createCustomer(id, "Test Corp", "Mumbai");
+        customerRepository.save(c);
+
+        String json = """
+    {
+      "customerName": ""
+    }
+    """;
+
+        mockMvc.perform(patch("/customer/" + id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message")
+                        .value("customerName cannot be blank"));
+    }
+
+    @Test
+    void shouldFailWhenPhoneInvalidOnUpdate() throws Exception {
+
+        int id = generateId();
+        Customer c = createCustomer(id, "Phone Corp", "Mumbai");
+        customerRepository.save(c);
+
+        String json = """
+    {
+      "phone": "abc123"
+    }
+    """;
+
+        mockMvc.perform(patch("/customer/" + id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message")
+                        .value("phone must be exactly 10 digits"));
+    }
+
+    @Test
+    void shouldFailWhenInvalidIdFormat() throws Exception {
+
+        String json = """
+    {
+      "city": "Delhi"
+    }
+    """;
+
+        mockMvc.perform(patch("/customer/abc")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message")
+                        .value("Invalid ID format. ID must be a number."));
+    }
+
+    @Test
+    void shouldNotUpdateCreditLimitWhenInvalid() throws Exception {
+
+        int id = generateId();
+        Customer c = createCustomer(id, "Credit Corp", "Nagpur");
+        customerRepository.save(c);
+
+        String json = """
+    {
+      "creditLimit": -5000
+    }
+    """;
+
+        mockMvc.perform(patch("/customer/" + id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message")
+                        .value("creditLimit cannot be negative"));
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenUpdatingNonExistingCustomer() throws Exception {
+
+        String patchJson = """
+    {
+      "customerName": "New Name"
+    }
+    """;
+
+        mockMvc.perform(patch("/customer/99999999")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(patchJson))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Customer not found"));
+    }
+
+    @Test
+    void shouldHandleEmptyPatchGracefully() throws Exception {
+
+        int id = generateId();
+        Customer c = createCustomer(id, "Test Corp", "Nagpur");
+        customerRepository.save(c);
+
+        mockMvc.perform(patch("/customer/" + id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isNoContent()); // ✅ FIX
+
+        Customer unchanged = customerRepository.findById(id).orElseThrow();
+
+        assertThat(unchanged.getCustomerName()).isEqualTo("Test Corp");
+        assertThat(unchanged.getCity()).isEqualTo("Nagpur");
+    }
+
+    @Test
+    void shouldNotUpdateWhenValidationFails() throws Exception {
+
+        int id = generateId();
+        Customer c = createCustomer(id, "Safe Corp", "Nagpur");
+        customerRepository.save(c);
+
+        String json = """
+    {
+      "phone": "abc123"
+    }
+    """;
+
+        mockMvc.perform(patch("/customer/" + id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message")
+                        .value("phone must be exactly 10 digits"));
+    }
+
+    @AfterEach
+    void cleanup() {
+
+        //Break FK: Customer → Employee
+        customerRepository.findAll().stream()
+                .filter(c -> c.getSalesRepEmployee() != null &&
+                        c.getSalesRepEmployee().getEmployeeNumber() >= 1000000)
+                .forEach(c -> {
+                    c.setSalesRepEmployee(null);
+                    customerRepository.save(c);
+                });
+
+        //Delete test customers
+        customerRepository.findAll().stream()
+                .filter(c -> c.getCustomerNumber() >= 1000000)
+                .forEach(customerRepository::delete);
+
+        //Delete test employees
+        employeeRepository.findAll().stream()
+                .filter(e -> e.getEmployeeNumber() >= 1000000)
+                .forEach(employeeRepository::delete);
+
+        //Delete test offices
+        officeRepository.findAll().stream()
+                .filter(o -> {
+                    try {
+                        return Integer.parseInt(o.getOfficeCode()) >= 1000000;
+                    } catch (Exception e) {
+                        return false;
+                    }
+                })
+                .forEach(officeRepository::delete);
     }
 }

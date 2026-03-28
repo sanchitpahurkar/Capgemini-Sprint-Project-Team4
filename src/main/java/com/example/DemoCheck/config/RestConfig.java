@@ -1,6 +1,5 @@
 package com.example.DemoCheck.config;
 
-import com.example.DemoCheck.handler.CustomerEventHandler;
 import org.jspecify.annotations.NonNull;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.rest.core.config.RepositoryRestConfiguration;
@@ -14,7 +13,6 @@ public class RestConfig implements RepositoryRestConfigurer {
             RepositoryRestConfiguration config,
             org.springframework.web.servlet.config.annotation.@NonNull CorsRegistry cors) {
 
-
         config.getProjectionConfiguration()
                 .addProjection(com.example.DemoCheck.projection.CustomerProjection.class);
 
@@ -22,12 +20,12 @@ public class RestConfig implements RepositoryRestConfigurer {
         config.getProjectionConfiguration()
                 .addProjection(com.example.DemoCheck.projection.OfficeProjection.class);
 
-        config.getProjectionConfiguration()
-                .addProjection(com.example.DemoCheck.projection.EmployeeProjection.class);
-
         //EXPOSE ID to be be included in the response
         config.exposeIdsFor(com.example.DemoCheck.entity.Office.class);
 
+        config.getProjectionConfiguration()
+                .addProjection(com.example.DemoCheck.projection.EmployeeProjection.class);
 
+        config.exposeIdsFor(com.example.DemoCheck.entity.Employee.class);
     }
 }
