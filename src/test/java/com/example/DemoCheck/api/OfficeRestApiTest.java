@@ -1,6 +1,8 @@
 package com.example.DemoCheck.api;
 
+import com.example.DemoCheck.entity.Employee;
 import com.example.DemoCheck.entity.Office;
+import com.example.DemoCheck.repository.EmployeeRepository;
 import com.example.DemoCheck.repository.OfficeRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +34,9 @@ class OfficeRestApiTest {
 
     @Autowired
     private OfficeRepository officeRepository;
+
+    @Autowired
+    private EmployeeRepository employeeRepository;
 
     private Office createOffice(
             String officeCode,
@@ -101,7 +106,7 @@ class OfficeRestApiTest {
                 createOffice("T23", "Tokyo", "6666666666", "F1", "F2", "State6", "Japan", "100-0002", "APAC")
         ));
 
-        mockMvc.perform(get("/offices/findCustomers/by-cities")
+        mockMvc.perform(get("/offices/search/by-cities")
                         .param("cities", "Paris,London"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$._embedded.offices").exists());
@@ -114,7 +119,7 @@ class OfficeRestApiTest {
                 createOffice("T32", "London", "8888888888", "H1", "H2", "State8", "UK", "EC1C", "EMEA")
         ));
 
-        mockMvc.perform(get("/offices/findCustomers/by-cities")
+        mockMvc.perform(get("/offices/search/by-cities")
                         .param("cities", "Xcity,XY"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$._embedded.offices.length()").value(0));
@@ -149,23 +154,25 @@ class OfficeRestApiTest {
 
     //patch update pass case
     @Test
-    void updatePhone_shouldUpdatePhone_whenOfficeExists() throws Exception{
-        officeRepository.save(
+    void updatePhone_shouldUpdatePhone_whenOfficeExists() throws Exception {
+        officeRepository.saveAndFlush(
                 createOffice("T93", "London", "2222222222", "B1", "B2", "S2", "UK", "EC1A", "EMEA")
         );
+
         String body = """
-                {
-                  "phone": "7777777777"
-                }
-                """;
+            {
+              "phone": "7777777777"
+            }
+            """;
 
         mockMvc.perform(patch("/offices/T93")
-                .contentType("application/merge-patch+json")
-                .content(body))
+                        .contentType("application/merge-patch+json")
+                        .content(body))
+                .andDo(print())
                 .andExpect(status().isNoContent());
 
         Office updated = officeRepository.findById("T93").orElseThrow();
-        assertEquals("7777777777",updated.getPhone());
+        assertEquals("7777777777", updated.getPhone());
     }
     //patch update fail case
     @Test
@@ -435,5 +442,53 @@ class OfficeRestApiTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.page.size").value(2))
                 .andExpect(jsonPath("$.page.number").value(0));
+    }
+
+    //3rd page
+    private Employee createEmployee(
+            Integer employeeNumber,
+            String firstName,
+            String lastName,
+            String extension,
+            String email,
+            String jobTitle,
+            Office office
+    ) {
+        Employee employee = new Employee();
+        employee.setEmployeeNumber(employeeNumber);
+        employee.setFirstName(firstName);
+        employee.setLastName(lastName);
+        employee.setExtension(extension);
+        employee.setEmail(email);
+        employee.setJobTitle(jobTitle);
+        employee.setOffice(office);
+        return employee;
+    }
+    @Test
+    void getEmployeesByOfficeCode_shouldReturnEmployeesOfSelectedOffice() throws Exception{
+        Office office1 = officeRepository.save(
+                createOffice("10", "London", "1111111111", "A1", "A2", null, "UK", "EC2N", "EMEA")
+        );
+        Office office2 = officeRepository.save(
+                createOffice("12", "Tokyo", "2222222222", "B1", "B2", null, "Japan", "100001", "APAC")
+        );
+
+        employeeRepository.save(createEmployee(2001, "John", "Doe", "x101", "john@example.com", "Sales Rep", office1));
+        employeeRepository.save(createEmployee(2002, "Jane", "Smith", "x102", "jane@example.com", "Manager", office1));
+        employeeRepository.save(createEmployee(2003, "Taro", "Yamada", "x201", "taro@example.com", "Clerk", office2));
+
+        mockMvc.perform(get("/employees/search/by-office-code")
+                .param("officeCode","10")
+                .param("projection","employeeList")
+                .param("page","0")
+                .param("size","6"))
+                .andDo(print())
+
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$._embedded.employees").exists())
+                .andExpect(jsonPath("$._embedded.employees[0].employeeNumber").exists())
+                .andExpect(jsonPath("$._embedded.employees[0].fullName").exists())
+                .andExpect(jsonPath("$.page.number").value(0))
+                .andExpect(jsonPath("$.page.size").value(6));
     }
 }

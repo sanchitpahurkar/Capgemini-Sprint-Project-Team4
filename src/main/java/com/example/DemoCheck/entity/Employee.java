@@ -1,7 +1,10 @@
 package com.example.DemoCheck.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
+
+import java.util.List;
 
 @Data
 @Entity
@@ -28,6 +31,20 @@ public class Employee {
     private String jobTitle;
 
     @ManyToOne
+    @JoinColumn(name = "reportsTo")
+    @JsonIgnore   // ✅ ignore manager loop
+    private Employee manager;
+
+    @OneToMany(mappedBy = "manager")
+    @JsonIgnore   // ✅ ignore manager loop
+    private List<Employee> subordinates;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "officeCode")
+    @JsonIgnore   // ✅ ignore office loop
     private Office office;
+
+    @OneToMany(mappedBy = "salesRepEmployee")
+    @JsonIgnore   // ✅ ignore customer loop
+    private List<Customer> customers;
 }

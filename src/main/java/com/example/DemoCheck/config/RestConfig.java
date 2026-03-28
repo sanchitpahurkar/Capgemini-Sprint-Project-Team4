@@ -22,5 +22,10 @@ public class RestConfig implements RepositoryRestConfigurer {
 
         //EXPOSE ID to be be included in the response
         config.exposeIdsFor(com.example.DemoCheck.entity.Office.class);
+
+        config.getProjectionConfiguration()
+                .addProjection(com.example.DemoCheck.projection.EmployeeListProjection.class);
+
+        config.exposeIdsFor(com.example.DemoCheck.entity.Employee.class);
     }
 }
