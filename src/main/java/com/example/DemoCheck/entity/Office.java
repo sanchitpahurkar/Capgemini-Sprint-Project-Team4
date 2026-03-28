@@ -1,5 +1,6 @@
 package com.example.DemoCheck.entity;
 
+
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;

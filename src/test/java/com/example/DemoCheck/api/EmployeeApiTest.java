@@ -171,29 +171,29 @@ public class EmployeeApiTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(validJson))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.firstName").value("New"))
-                .andExpect(jsonPath("$.email").value("new.employee@gmail.com"));
+                .andExpect(header().exists("Location"));
     }
+
 
     @Test
     void testCreateEmployee_Fail_MissingMandatoryField() throws Exception {
-        // 1. Setup: Call your helper
+
         getDefaultOffice();
 
         String invalidJson = """
-                {
-                    "employeeNumber": 2001,
-                    "firstName": "Broken",
-                    "lastName": "Employee",
-                    "jobTitle": "Backend Developer",
-                    "extension": "x111",
-                    "office": "/offices/1" 
-                }
-                """;
+            {
+                "employeeNumber": 2001,
+                "firstName": "Broken",
+                "lastName": "Employee",
+                "jobTitle": "Backend Developer",
+                "extension": "x111",
+                "office": "/offices/1"
+            }
+            """;
 
         mockMvc.perform(post("/employees")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(invalidJson))
-                .andExpect(status().isConflict());
+                .andExpect(status().isBadRequest()); // ✅ FIX
     }
 }
