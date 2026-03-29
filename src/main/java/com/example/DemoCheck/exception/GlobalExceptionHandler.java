@@ -1,5 +1,6 @@
 package com.example.DemoCheck.exception;
 
+import com.example.DemoCheck.handler.EmployeeEventHandler;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.core.convert.ConversionFailedException;
@@ -94,17 +95,46 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
-        // Generic fallback
-        @ExceptionHandler(Exception.class)
-        public ResponseEntity<ErrorResponse> handleGeneric(
-                        Exception ex,
-                        HttpServletRequest request) {
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDBError(
+            Exception ex,
+            HttpServletRequest request) {
 
-                ErrorResponse error = new ErrorResponse(
-                                HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                                ex.getMessage(),
-                                request.getRequestURI(),
-                                LocalDateTime.now());
+        try {
+            Integer id = EmployeeEventHandler.currentEmployeeId.get();
+
+            String message = (id != null)
+                    ? "Employee already exists with id: " + id
+                    : "Duplicate employee";
+
+            ErrorResponse error = new ErrorResponse(
+                    400,
+                    message,
+                    request.getRequestURI(),
+                    LocalDateTime.now()
+            );
+
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+
+        } finally {
+            // ✅ CLEANUP HERE
+            EmployeeEventHandler.currentEmployeeId.remove();
+        }
+    }
+
+
+    //Generic fallback
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse> handleGeneric(
+            Exception ex,
+            HttpServletRequest request) {
+
+        ErrorResponse error = new ErrorResponse(
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                ex.getMessage(),
+                request.getRequestURI(),
+                LocalDateTime.now()
+        );
 
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
     }

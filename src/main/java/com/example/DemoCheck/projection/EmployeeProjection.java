@@ -13,6 +13,10 @@ public interface EmployeeProjection {
 
     String getExtension();
     String getEmail();
-    String getReportsTo();
+
+    // ✅ show reportsTo (manager ID)
+    @Value("#{target.manager != null ? target.manager.employeeNumber : null}")
+    Integer getReportsTo();
+
     String getJobTitle();
 }

@@ -45,7 +45,7 @@ public class RestConfig implements RepositoryRestConfigurer {
         config.exposeIdsFor(com.example.DemoCheck.entity.Office.class);
 
         config.getProjectionConfiguration()
-                .addProjection(com.example.DemoCheck.projection.EmployeeListProjection.class);
+                .addProjection(com.example.DemoCheck.projection.EmployeeProjection.class);
 
         config.exposeIdsFor(com.example.DemoCheck.entity.Employee.class);
     }

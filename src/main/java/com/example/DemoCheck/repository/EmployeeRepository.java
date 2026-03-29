@@ -21,14 +21,11 @@ public interface EmployeeRepository extends JpaRepository<Employee,Integer> {
     @RestResource(path = "byOfficeCode", rel = "byOfficeCode")
     Page<Employee> findByOfficeOfficeCode(@Param("officeCode") String officeCode, Pageable pageable);
 
-//    @RestResource(path="byReportsTo" , rel="byReportsTo")
-//    Page<Employee> findByReportsTo(@Param("reportsTo") String reportsTo , Pageable pageable);
+    @RestResource(path="byReportsTo" , rel="byReportsTo")
+    Page<Employee> findByManagerEmployeeNumber(@Param("reportsTo") Integer reportsTo , Pageable pageable);
 
     // 3. Standard Spring Data Method for Job Title
     @RestResource(path = "byJobTitle", rel = "byJobTitle")
     Page<Employee> findByJobTitleContainingIgnoreCase(@Param("jobTitle") String jobTitle, Pageable pageable);
 
-    @RestResource(path = "by-office-code",rel = "by-office-code")
-    Page<Employee> findByOffice_OfficeCode(@Param("officeCode") String officeCode,
-                                           Pageable pageable);
 }

@@ -122,9 +122,13 @@ public class EmployeeApiTest {
 
         mockMvc.perform(get("/employees/search/byJobTitle")
                         .param("jobTitle", "sales")
-                        .param("projection", "employeeView"))
+                        .param("projection", "employeeView")
+                        .param("page", "0")   // ✅ page number
+                        .param("size", "1"))  // ✅ page size)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$._embedded.employees").exists())
+                .andExpect(jsonPath("$.page.size").value(1))     // ✅ check page size
+                .andExpect(jsonPath("$.page.number").value(0))   // ✅ check page number
                 .andExpect(jsonPath("$._embedded.employees[0].jobTitle").value("Sales Manager (NA)"));
     }
 
@@ -146,9 +150,14 @@ public class EmployeeApiTest {
 
         mockMvc.perform(get("/employees/search/byReportsTo")
                         .param("reportsTo", "1")
-                        .param("projection", "employeeView"))
+                        .param("projection", "employeeView")
+                        .param("page", "0")   // ✅ pagination
+                        .param("size", "1")) // ✅ only 1 result per page)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$._embedded.employees").exists())
+                // ✅ pagination checks
+                .andExpect(jsonPath("$.page.size").value(1))
+                .andExpect(jsonPath("$.page.number").value(0))
                 .andExpect(jsonPath("$._embedded.employees[0].jobTitle").value("Sales Rep"));
     }
 
@@ -190,7 +199,7 @@ public class EmployeeApiTest {
 
 
     @Test
-    void testCreateEmployee_Fail_MissingMandatoryField() throws Exception {
+    void testCreateEmployee_Fail_MissingFirstName() throws Exception {
 
         getDefaultOffice();
 
@@ -208,6 +217,252 @@ public class EmployeeApiTest {
         mockMvc.perform(post("/employees")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(invalidJson))
-                .andExpect(status().isBadRequest()); // ✅ FIX
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("lastName cannot be blank"));; // ✅ FIX
     }
+
+    @Test
+    void testCreateEmployee_Fail_NullEmployeeNumber() throws Exception {
+        getDefaultOffice();
+        String invalidJson = """
+            {
+                "firstName": "John",
+                "lastName": "Doe",
+                "email": "john.doe@test.com",
+                "jobTitle": "Backend Developer",
+                "office": "/offices/1"
+            }
+            """;
+
+        mockMvc.perform(post("/employees")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(invalidJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("employeeNumber cannot be null"));
+    }
+
+    @Test
+    void testCreateEmployee_Fail_DuplicateEmployeeNumber() throws Exception {
+        Office savedOffice = getDefaultOffice();
+        String officeId = savedOffice.getOfficeCode();
+
+        // First insert to ensure the ID exists
+        String validJson = """
+            {
+                "employeeNumber": 2005,
+                "firstName": "Original",
+                "lastName": "User",
+                "email": "original@test.com",
+                "extension": "x123",
+                "jobTitle": "Developer",
+                "office": "/offices/%s"
+            }
+            """.formatted(officeId);;
+        mockMvc.perform(post("/employees")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validJson))
+                .andExpect(status().isCreated());
+
+        // Attempt duplicate insert
+        String duplicateJson = """
+            {
+                "employeeNumber": 2005,
+                "firstName": "Duplicate",
+                "lastName": "User",
+                "email": "duplicate@test.com",
+                "extension": "x123",
+                "jobTitle": "Developer",
+                "office": "/offices/%s"
+            }
+            """.formatted(officeId);;
+        mockMvc.perform(post("/employees")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(duplicateJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Employee already exists with id: 2005"));
+    }
+
+    @Test
+    void testCreateEmployee_Fail_BlankFirstName() throws Exception {
+        getDefaultOffice();
+        String invalidJson = """
+            {
+                "employeeNumber": 2002,
+                "firstName": "   ",
+                "lastName": "Doe",
+                "email": "john.doe@test.com",
+                "jobTitle": "Backend Developer",
+                "office": "/offices/1"
+            }
+            """;
+
+        mockMvc.perform(post("/employees")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(invalidJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("firstName cannot be blank"));
+    }
+
+    @Test
+    void testCreateEmployee_Fail_BlankEmail() throws Exception {
+        getDefaultOffice();
+        String invalidJson = """
+            {
+                "employeeNumber": 2003,
+                "firstName": "John",
+                "lastName": "Doe",
+                "email": "",
+                "jobTitle": "Backend Developer",
+                "office": "/offices/1"
+            }
+            """;
+
+        mockMvc.perform(post("/employees")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(invalidJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("email cannot be blank"));
+    }
+
+    @Test
+    void testCreateEmployee_Fail_InvalidEmailFormat() throws Exception {
+        getDefaultOffice();
+        String invalidJson = """
+            {
+                "employeeNumber": 2004,
+                "firstName": "John",
+                "lastName": "Doe",
+                "email": "invalid-email-format",
+                "jobTitle": "Backend Developer",
+                "office": "/offices/1"
+            }
+            """;
+
+        mockMvc.perform(post("/employees")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(invalidJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Must be a valid email format"));
+    }
+
+
+    @Test
+    void UpdateEmployee_JobTitle_Pass() throws Exception {
+        Office office = getDefaultOffice();
+        createTestEmployee(3007, "John", "Doe", "john@test.com", "Dev", null, office);
+
+        String updateJson = """
+        {
+            "jobTitle": "Senior Developer"
+        }
+        """;
+
+        mockMvc.perform(patch("/employees/3007")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(updateJson))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void UpdateEmployee_JobTitle_Fail_Blank() throws Exception {
+        Office office = getDefaultOffice();
+        createTestEmployee(3008, "John", "Doe", "john@test.com", "Dev", null, office);
+
+        String updateJson = """
+        {
+            "jobTitle": ""
+        }
+        """;
+
+        mockMvc.perform(patch("/employees/3008")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(updateJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("jobTitle cannot be blank"));
+    }
+
+    @Test
+    void UpdateEmployee_Office_Pass() throws Exception {
+        Office office1 = getDefaultOffice();
+        Office office2 = new Office();
+        office2.setOfficeCode("2");
+        office2.setCity("Mumbai");
+        office2.setPhone("1234567890");
+        office2.setAddressLine1("IT Park");
+        office2.setCountry("India");
+        office2.setPostalCode("440022");
+        office2.setTerritory("APAC");
+        officeRepository.save(office2);
+
+        createTestEmployee(3009, "John", "Doe", "john@test.com", "Dev", null, office1);
+
+        String updateJson = """
+        {
+            "office": "/offices/2"
+        }
+        """;
+
+        mockMvc.perform(put("/employees/3009/office")
+                        .contentType("text/uri-list")
+                        .content("/offices/2"))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void UpdateEmployee_Office_Fail_NotFound() throws Exception {
+        Office office = getDefaultOffice();
+        createTestEmployee(3010, "John", "Doe", "john@test.com", "Dev", null, office);
+
+        String updateJson = """
+        {
+            "office": "/offices/999"
+        }
+        """;
+
+        // Spring Data REST usually returns 400 or 404 for broken links
+        // depending on the version. If you expect 400, ensure your
+        // ExceptionHandler handles ResourceNotFoundException during binding.
+        mockMvc.perform(put("/employees/3010/offices")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(updateJson))
+                .andExpect(status().is4xxClientError());
+    }
+
+    @Test
+    void UpdateEmployee_ReportsTo_Pass() throws Exception {
+        Office office = getDefaultOffice();
+
+        createTestEmployee(4001, "Boss", "Manager", "boss@test.com", "CEO", null, office);
+        createTestEmployee(4002, "John", "Doe", "john@test.com", "Dev", null, office);
+
+        String updateJson = """
+{
+    "reportsTo": "/employees/4001"
+}
+""";
+
+        mockMvc.perform(patch("/employees/4002")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(updateJson))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void UpdateEmployee_ReportsToSelf_Fail_Invalid() throws Exception {
+        Office office = getDefaultOffice();
+        createTestEmployee(4001, "Boss", "Manager", "boss@test.com", "CEO", null, office);
+        createTestEmployee(4003, "John", "Doe", "john@test.com", "Dev", null, office);
+
+        String updateJson = """
+        {
+            "reportsTo": "/employees/4003"
+        }
+        """;
+
+        mockMvc.perform(put("/employees/4003")
+                        .contentType("text/uri-list")
+                        .content("/employees/4003"))
+                .andExpect(status().is4xxClientError());
+    }
+
 }
