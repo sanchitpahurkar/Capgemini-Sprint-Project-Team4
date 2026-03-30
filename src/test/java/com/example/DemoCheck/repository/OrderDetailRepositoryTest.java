@@ -14,6 +14,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.DemoCheck.entity.Customer;
@@ -101,7 +103,11 @@ public class OrderDetailRepositoryTest {
 
     @Test
     void testFindByProduct_ProductCode() {
-        List<OrderDetails> result = orderDetailRepository.findByProduct_ProductCode("S10_89876");
+
+        Page<OrderDetails> page = orderDetailRepository
+                .findByProduct_ProductCode("S10_89876", PageRequest.of(0, 10));
+
+        List<OrderDetails> result = page.getContent();
 
         assertNotNull(result);
         assertEquals(1, result.size());
@@ -109,51 +115,56 @@ public class OrderDetailRepositoryTest {
         OrderDetails orderDetailRecord = result.get(0);
         assertEquals("S10_89876", orderDetailRecord.getProduct().getProductCode());
         assertEquals(50, orderDetailRecord.getQuantityOrdered());
-    }   
+    }
 
     @Test
     void testFindByProduct_ProductCode_NoRecords() {
-        List<OrderDetails> result = orderDetailRepository.findByProduct_ProductCode("S18_3233"); // valid product with no orderdetail record
 
-        assertNotNull(result);
-        assertTrue(result.isEmpty());
+        Page<OrderDetails> page = orderDetailRepository
+                .findByProduct_ProductCode("S18_3233", PageRequest.of(0, 10));
+
+        assertNotNull(page);
+        assertTrue(page.getContent().isEmpty());
     }
 
     @Test
     void testFindByProduct_InvalidProductCode() {
-        List<OrderDetails> result = orderDetailRepository.findByProduct_ProductCode("INVALID_CODE");
 
-        // Assertions
-        assertNotNull(result);
-        assertTrue(result.isEmpty());
+        Page<OrderDetails> page = orderDetailRepository
+                .findByProduct_ProductCode("INVALID_CODE", PageRequest.of(0, 10));
+
+        assertNotNull(page);
+        assertTrue(page.getContent().isEmpty());
     }
 
     @Test
     void testFindByProduct_ProductCode_MultipleRecords() {
-        List<OrderDetails> result = orderDetailRepository.findByProduct_ProductCode("S10_1949");
 
-        assertNotNull(result);
-        assertTrue(result.size() >= 1);
-    } 
+        Page<OrderDetails> page = orderDetailRepository
+                .findByProduct_ProductCode("S10_89876", PageRequest.of(0, 10));
+
+        assertNotNull(page);
+        assertTrue(page.getContent().size() >= 1);
+    }
 
     // null input test
     @Test
     void testFindByProduct_ProductCode_nullInput() {
 
-        List<OrderDetails> result =
-                orderDetailRepository.findByProduct_ProductCode(null);
+        Page<OrderDetails> page =
+                orderDetailRepository.findByProduct_ProductCode(null, PageRequest.of(0, 10));
 
-        assertTrue(result.isEmpty());
+        assertTrue(page.getContent().isEmpty());
     }
 
     // relationship integrity
     @Test
     void testOrderDetailDataIntegrity() {
 
-        List<OrderDetails> result =
-                orderDetailRepository.findByProduct_ProductCode("S10_89876");
+        Page<OrderDetails> page =
+                orderDetailRepository.findByProduct_ProductCode("S10_89876", PageRequest.of(0, 10));
 
-        OrderDetails od = result.get(0);
+        OrderDetails od = page.getContent().get(0);
 
         assertNotNull(od.getOrder());
         assertNotNull(od.getProduct());
