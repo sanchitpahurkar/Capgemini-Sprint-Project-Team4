@@ -4,6 +4,7 @@ import com.example.DemoCheck.entity.Employee;
 import com.example.DemoCheck.repository.EmployeeRepository;
 import com.example.DemoCheck.repository.OfficeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.rest.core.annotation.HandleAfterSave;
 import org.springframework.data.rest.core.annotation.HandleBeforeCreate;
 import org.springframework.data.rest.core.annotation.HandleBeforeSave;
 import org.springframework.data.rest.core.annotation.RepositoryEventHandler;
@@ -32,6 +33,12 @@ public class EmployeeEventHandler {
     @HandleBeforeSave
     public void beforeSave(Employee employee) {
         validate(employee);
+    }
+
+    // This runs automatically AFTER a successful update
+    @HandleAfterSave
+    public void afterSave(Employee employee) {
+        currentEmployeeId.remove(); // Erase the notepad!
     }
 
     private void checkDuplicate(Employee employee) {
