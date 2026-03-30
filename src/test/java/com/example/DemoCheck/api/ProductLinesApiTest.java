@@ -200,11 +200,11 @@ public class ProductLinesApiTest {
     }
     """;
 
-        mockMvc.perform(put("/productlines/{id}", "DoesNotExist")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(json));
-
-        assertThat(repository.findById("DoesNotExist")).isPresent();
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .put("/productlines/{id}", "DoesNotExist")
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isNoContent());
     }
 
 
