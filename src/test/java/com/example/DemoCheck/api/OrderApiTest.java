@@ -1,6 +1,8 @@
 package com.example.DemoCheck.api;
 
+import com.example.DemoCheck.entity.Customer;
 import com.example.DemoCheck.entity.Order;
+import com.example.DemoCheck.repository.CustomerRepository;
 import com.example.DemoCheck.repository.OrderRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +29,9 @@ public class OrderApiTest {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private CustomerRepository customerRepository;
 
 
 //    @Test
@@ -193,5 +198,45 @@ public class OrderApiTest {
 
         mockMvc.perform(get("/orders?page=0&size=5"))
                 .andExpect(status().isOk());
+    }
+//    @Test
+//    void createOrder_withValidCustomerNumber_shouldSucceed() throws Exception {
+//
+//        Customer customer = new Customer();
+//        customer.setCustomerNumber(9999);
+//        customerRepository.save(customer);
+//
+//        String orderJson = """
+//                {
+//                  "orderDate": "2023-01-01",
+//                  "requiredDate": "2023-01-10",
+//                  "status": "In Process",
+//                  "customer": "/customers/141"
+//                }
+//                """;
+//
+//        mockMvc.perform(post("/orders")
+//                        .contentType(MediaType.APPLICATION_JSON)
+//                        .content(orderJson))
+//                .andExpect(status().isCreated());
+//    }
+
+
+    @Test
+    void createOrder_withInvalidCustomerNumber_shouldFail() throws Exception {
+
+        String orderJson = """
+                {
+                  "orderDate": "2023-01-01",
+                  "requiredDate": "2023-01-10",
+                  "status": "In Process",
+                  "customer": "/customers/99999"
+                }
+                """;
+
+        mockMvc.perform(post("/orders")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(orderJson))
+                .andExpect(status().isBadRequest());
     }
 }

@@ -1,11 +1,14 @@
 package com.example.DemoCheck.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.util.List;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -14,22 +17,24 @@ import java.time.LocalDate;
 public class Order {
 
     @Id
-    @Column(name = "orderNumber")
+//    @GeneratedValue(strategy = GenerationType.IDENTITY)  // THIS IS MISSING
     private Integer orderNumber;
 
-    @Column(name = "orderDate", nullable = false)
     private LocalDate orderDate;
-
-    @Column(name = "requiredDate", nullable = false)
     private LocalDate requiredDate;
-
-    @Column(name = "shippedDate")
     private LocalDate shippedDate;
 
-    @Column(name = "status", nullable = false)
     private String status;
-
-    @Column(name = "comments", columnDefinition = "TEXT")
     private String comments;
+
+    @ManyToOne
+    @JoinColumn(name = "customerNumber")
+//    @JsonIgnore   // ADD THIS
+    private Customer customer;
+
+    @OneToMany(mappedBy = "order")
+//    @JsonIgnore   // ADD THIS
+    List<OrderDetails> orderDetails;
 }
+
 
