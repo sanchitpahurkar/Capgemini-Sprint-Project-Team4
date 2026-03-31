@@ -52,7 +52,7 @@ public class GlobalExceptionHandler {
 
         if (path.contains("/employees")) {
             message = "Employee not found";
-        } else if (path.contains("/customers")) {
+        } else if (path.contains("/customer/update") || path.contains("/customer")) {
             message = "Customer not found";
         } else {
             message = "Resource not found";
