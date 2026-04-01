@@ -144,7 +144,7 @@ public class OrderApiTest {
         mockMvc.perform(put("/orders/51")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isCreated());
     }
     @Test
     void testDeleteOrder() throws Exception {
