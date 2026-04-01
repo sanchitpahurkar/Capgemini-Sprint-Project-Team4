@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 import com.example.DemoCheck.entity.Product;
 import com.example.DemoCheck.repository.ProductLineRepository;
 import com.example.DemoCheck.repository.ProductRepository;
+import com.example.DemoCheck.util.ProductCodeGenerator;
 
 @RepositoryEventHandler(Product.class)
 @Component
@@ -19,16 +20,32 @@ public class ProductEventHandler {
     @Autowired
     private ProductRepository productRepository;
 
+    @Autowired
+    private ProductCodeGenerator generator;
+
+
     @HandleBeforeCreate
     public void handleBeforeCreate(Product p) {
-        if (productRepository.existsById(p.getProductCode())) {
-            throw new IllegalArgumentException("Product already exists");
-        }
+        p.setProductCode(generator.generateProductCode());
+
         validateProductLine(p);
     }
 
+    // @HandleBeforeCreate
+    // public void handleBeforeCreate(Product p) {
+    //     if (productRepository.existsById(p.getProductCode())) {
+    //         throw new IllegalArgumentException("Product ID already exists");
+    //     }
+
+    //     validateProductLine(p);
+    // }
+
     @HandleBeforeSave
     public void handleBeforeSave(Product p) {
+        if (p.getProductCode() == null || p.getProductCode().isEmpty()) {
+            p.setProductCode(generator.generateProductCode());
+        }
+
         validateProductLine(p);
     }
 

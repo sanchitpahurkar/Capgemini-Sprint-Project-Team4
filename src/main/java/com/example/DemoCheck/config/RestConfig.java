@@ -17,10 +17,10 @@ import com.example.DemoCheck.validator.ProductValidator;
 @Configuration
 public class RestConfig implements RepositoryRestConfigurer {
 
-        @Bean
-        public ProductEventHandler productEventHandler() {
-                return new ProductEventHandler();
-        }
+        // @Bean
+        // public ProductEventHandler productEventHandler() {
+        //         return new ProductEventHandler();
+        // }
 
         @Autowired
         private ProductValidator productValidator;

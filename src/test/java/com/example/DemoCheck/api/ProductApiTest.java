@@ -460,29 +460,6 @@ public class ProductApiTest {
             .andExpect(status().isBadRequest());
     }
 
-    // tests Product creation failure due to duplicate product insertion in JSON through POST endpoint
-    @Test
-    void testCreateProduct_DuplicateProductCode() throws Exception {
-        String json = """
-            {
-                "productCode": "S10_9999",
-                "productName": "Duplicate",
-                "productLine": "/productLines/Jets",
-                "productVendor": "Vendor",
-                "productScale": "1:18",
-                "productDescription": "Desc",
-                "quantityInStock": 10,
-                "buyPrice": 100.0,
-                "MSRP": 150.0
-            }
-        """;
-
-        mockMvc.perform(post("/products")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(json))
-            .andExpect(status().isBadRequest()); // or isBadRequest depending on handler
-    }
-
     
     // ================================================ PUT/PATCH Product tests ================================================
 

@@ -9,10 +9,12 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 import org.springframework.data.rest.core.annotation.RestResource;
 import org.springframework.stereotype.Repository;
+import org.springframework.web.bind.annotation.CrossOrigin;
 
 import com.example.DemoCheck.entity.OrderDetailId;
 import com.example.DemoCheck.entity.OrderDetails;
 
+@CrossOrigin(origins = "*")
 @Repository
 @RepositoryRestResource(path = "orderdetails")
 public interface OrderDetailRepository extends JpaRepository<OrderDetails, OrderDetailId> {
