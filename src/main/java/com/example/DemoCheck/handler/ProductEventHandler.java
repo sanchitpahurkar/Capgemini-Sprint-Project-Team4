@@ -24,7 +24,6 @@ public class ProductEventHandler {
         if (productRepository.existsById(p.getProductCode())) {
             throw new IllegalArgumentException("Product already exists");
         }
-
         validateProductLine(p);
     }
 

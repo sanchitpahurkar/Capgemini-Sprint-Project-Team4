@@ -10,8 +10,10 @@
 
     import com.example.DemoCheck.entity.Product;
     import com.example.DemoCheck.projection.ProductProjection;
+    import org.springframework.web.bind.annotation.CrossOrigin;
 
     @Validated
+    @CrossOrigin(origins = "*")
     @RepositoryRestResource(path = "products")
     // @RepositoryRestResource(path = "products", excerptProjection = ProductProjection.class)
     public interface ProductRepository extends JpaRepository<Product, String> {
@@ -20,5 +22,11 @@
             @Param("name") String name,
             @Param("line") String line,
             Pageable pageable
+        );
+        @RestResource(path = "searchByNameOrLineTwo")
+        Page<Product> findByProductNameEqualsIgnoreCaseOrProductLine_ProductLineEqualsIgnoreCase(
+                @Param("name") String name,
+                @Param("line") String line,
+                Pageable pageable
         );
     }
