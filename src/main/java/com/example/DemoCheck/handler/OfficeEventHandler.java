@@ -1,6 +1,7 @@
 package com.example.DemoCheck.handler;
 
 import com.example.DemoCheck.entity.Office;
+import com.example.DemoCheck.service.OfficeCodeGeneratorService;
 import org.springframework.data.rest.core.annotation.HandleBeforeCreate;
 import org.springframework.data.rest.core.annotation.HandleBeforeSave;
 import org.springframework.data.rest.core.annotation.RepositoryEventHandler;
@@ -11,24 +12,39 @@ import org.springframework.util.StringUtils;
 @Component
 public class OfficeEventHandler {
 
+    private final OfficeCodeGeneratorService generator;
+
+    public OfficeEventHandler(OfficeCodeGeneratorService generator) {
+        this.generator = generator;
+    }
+
     // POST
     @HandleBeforeCreate
     public void validateBeforeCreate(Office office) {
+
+        //FIRST: generate officeCode
+        if (!StringUtils.hasText(office.getOfficeCode())) {
+            office.setOfficeCode(generator.generateOfficeCode());
+        }
+
+        //THEN: validate
+        normalizeOptionalFields(office);
         validateOffice(office);
     }
 
     // PUT + PATCH
     @HandleBeforeSave
     public void validateBeforeSave(Office office) {
+        normalizeOptionalFields(office);
         validateOffice(office);
     }
 
     private void validateOffice(Office office) {
 
-        // Office Code (important for POST)
-        if (!StringUtils.hasText(office.getOfficeCode())) {
-            throw new IllegalArgumentException("Office Code cannot be blank");
-        }
+//        // Office Code (important for POST)
+//        if (!StringUtils.hasText(office.getOfficeCode())) {
+//            throw new IllegalArgumentException("Office Code cannot be blank");
+//        }
 
         if (office.getOfficeCode().length() > 10) {
             throw new IllegalArgumentException("Office Code max length is 10");
@@ -95,6 +111,16 @@ public class OfficeEventHandler {
 
         if (office.getAddressLine2() != null && office.getAddressLine2().length() > 50) {
             throw new IllegalArgumentException("AddressLine2 max length is 50");
+        }
+    }
+
+    private void normalizeOptionalFields(Office office) {
+        if (!StringUtils.hasText(office.getAddressLine2())) {
+            office.setAddressLine2(null);
+        }
+
+        if (!StringUtils.hasText(office.getState())) {
+            office.setState(null);
         }
     }
 }
