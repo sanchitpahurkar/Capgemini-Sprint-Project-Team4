@@ -1,5 +1,7 @@
 package com.example.DemoCheck.projection;
+
 import com.example.DemoCheck.entity.Order;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.rest.core.config.Projection;
 
 import java.time.LocalDate;
@@ -8,12 +10,9 @@ import java.time.LocalDate;
 public interface OrderListProjection {
 
     LocalDate getOrderDate();
-
     LocalDate getRequiredDate();
-
     LocalDate getShippedDate();
 
     String getStatus();
-
     String getComments();
 }

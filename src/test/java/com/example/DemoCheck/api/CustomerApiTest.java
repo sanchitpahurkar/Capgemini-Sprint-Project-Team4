@@ -148,6 +148,7 @@ class CustomerApiTest {
 
     // ---------------- PAGINATION ----------------
 
+    @Test
     void testPagination() throws Exception {
         mockMvc.perform(get("/customer")
                         .param("page", "0")
@@ -381,7 +382,7 @@ class CustomerApiTest {
                         .content(json))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message")
-                        .value("phone must be exactly 10 digits"));
+                        .value("phone must contain 8 to 15 digits"));
     }
 
     @Test
@@ -411,38 +412,39 @@ class CustomerApiTest {
                         .value("creditLimit cannot be negative"));
     }
 
-    @Test
-    void shouldFailWhenDuplicateCustomerId() throws Exception {
-
-        int id = generateId();
-
-        String json = """
-    {
-      "customerNumber": %d,
-      "customerName": "Duplicate Corp",
-      "contactLastName": "Doe",
-      "contactFirstName": "John",
-      "phone": "1234567890",
-      "addressLine1": "Street 1",
-      "city": "Nagpur",
-      "country": "India"
-    }
-    """.formatted(id);
-
-        // First insert
-        mockMvc.perform(post("/customer")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(json))
-                .andExpect(status().isCreated());
-
-        // Duplicate insert
-        mockMvc.perform(post("/customer")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(json))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message")
-                        .value("Customer already exists with id: " + id));
-    }
+    //test no longer valid due to auto id generation
+//    @Test
+//    void shouldFailWhenDuplicateCustomerId() throws Exception {
+//
+//        int id = generateId();
+//
+//        String json = """
+//    {
+//      "customerNumber": %d,
+//      "customerName": "Duplicate Corp",
+//      "contactLastName": "Doe",
+//      "contactFirstName": "John",
+//      "phone": "1234567890",
+//      "addressLine1": "Street 1",
+//      "city": "Nagpur",
+//      "country": "India"
+//    }
+//    """.formatted(id);
+//
+//        // First insert
+//        mockMvc.perform(post("/customer")
+//                        .contentType(MediaType.APPLICATION_JSON)
+//                        .content(json))
+//                .andExpect(status().isCreated());
+//
+//        // Duplicate insert
+//        mockMvc.perform(post("/customer")
+//                        .contentType(MediaType.APPLICATION_JSON)
+//                        .content(json))
+//                .andExpect(status().isBadRequest())
+//                .andExpect(jsonPath("$.message")
+//                        .value("Customer already exists with id: " + id));
+//    }
 
     @Test
     void shouldFailWhenCustomerNameBlank() throws Exception {
@@ -470,28 +472,30 @@ class CustomerApiTest {
                         .value("customerName cannot be blank"));
     }
 
-    @Test
-    void shouldFailWhenCustomerNumberNull() throws Exception {
 
-        String json = """
-    {
-      "customerName": "Null ID Corp",
-      "contactLastName": "Doe",
-      "contactFirstName": "John",
-      "phone": "1234567890",
-      "addressLine1": "Street 1",
-      "city": "Nagpur",
-      "country": "India"
-    }
-    """;
-
-        mockMvc.perform(post("/customer")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(json))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message")
-                        .value("customerNumber cannot be null"));
-    }
+    //test no longer valid due auto id generation
+//    @Test
+//    void shouldFailWhenCustomerNumberNull() throws Exception {
+//
+//        String json = """
+//    {
+//      "customerName": "Null ID Corp",
+//      "contactLastName": "Doe",
+//      "contactFirstName": "John",
+//      "phone": "1234567890",
+//      "addressLine1": "Street 1",
+//      "city": "Nagpur",
+//      "country": "India"
+//    }
+//    """;
+//
+//        mockMvc.perform(post("/customer")
+//                        .contentType(MediaType.APPLICATION_JSON)
+//                        .content(json))
+//                .andExpect(status().isBadRequest())
+//                .andExpect(jsonPath("$.message")
+//                        .value("customerNumber cannot be null"));
+//    }
 
     @Test
     void shouldFailWhenPostalCodeInvalid() throws Exception {

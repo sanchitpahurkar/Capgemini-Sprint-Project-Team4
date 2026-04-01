@@ -70,5 +70,10 @@ public class RestConfig implements RepositoryRestConfigurer {
         config.getProjectionConfiguration().addProjection(OrderDetailProjection.class);
 
         config.getProjectionConfiguration().addProjection(ProductProjection.class);
+
+        cors.addMapping("/**")
+               .allowedOrigins("http://localhost:8082")
+               .allowedMethods("GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS")
+                .allowedHeaders("*");
     }
 }

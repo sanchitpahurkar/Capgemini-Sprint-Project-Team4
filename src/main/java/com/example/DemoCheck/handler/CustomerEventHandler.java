@@ -15,9 +15,10 @@ import java.math.BigDecimal;
 @RepositoryEventHandler(Customer.class)
 public class CustomerEventHandler {
 
-    private static final String PHONE_REGEX = "^[0-9]{10}$";
+    private static final String PHONE_REGEX = "^[0-9]{8,15}$";
     private static final String POSTAL_REGEX = "^[0-9]{6}$";
     private static final int MAX_NAME_LENGTH = 50;
+    private static long lastId = 0;
 
     @Autowired
     private CustomerRepository customerRepository;
@@ -28,6 +29,7 @@ public class CustomerEventHandler {
     //CREATE → check duplicate + validate
     @HandleBeforeCreate
     public void beforeCreate(Customer customer) {
+        customer.setCustomerNumber(generateCustomerId());
         checkDuplicate(customer);
         validate(customer);
     }
@@ -47,6 +49,18 @@ public class CustomerEventHandler {
                     "Customer already exists with id: " + customer.getCustomerNumber()
             );
         }
+    }
+
+    private synchronized Integer generateCustomerId() {
+        long current = System.currentTimeMillis();
+
+        if (current <= lastId) {
+            current = lastId + 1;
+        }
+
+        lastId = current;
+
+        return (int) (current % Integer.MAX_VALUE);
     }
 
     //Main validation entry
@@ -100,9 +114,19 @@ public class CustomerEventHandler {
     private void validatePhone(Customer customer) {
         String phone = customer.getPhone();
 
-        if (phone == null || !phone.matches(PHONE_REGEX)) {
-            throw new IllegalArgumentException("phone must be exactly 10 digits");
+        if (phone == null) {
+            throw new IllegalArgumentException("phone cannot be null");
         }
+
+        // Normalize → remove non-digits
+        phone = phone.replaceAll("[^\\d]", "");
+
+        if (!phone.matches(PHONE_REGEX)) {
+            throw new IllegalArgumentException("phone must contain 8 to 15 digits");
+        }
+
+        // Save normalized value
+        customer.setPhone(phone);
     }
 
     private void validateAddress(Customer customer) {
