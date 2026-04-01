@@ -71,13 +71,28 @@ public class OrderApiTest {
     }
     @Test
     void testCreateOrder() throws Exception {
+        // 1. Create a Customer to satisfy the Foreign Key requirement
+        Customer customer = new Customer();
+        customer.setCustomerNumber(119);
+        customer.setCustomerName("Test Corp");
+        customer.setContactFirstName("John");
+        customer.setContactLastName("Doe");
+        customer.setPhone("555-0123");
+        customer.setAddressLine1("123 Java Lane");
+        customer.setCity("Nagpur");
+        customer.setCountry("India");
+        customerRepository.save(customer);
 
+        // 2. Include the "customer" link in your JSON using the URI format
         String json = """
-        {
-            "orderNumber": 10150,
-            "status": "Processing"
-        }
-        """;
+    {
+        "orderNumber": 10150,
+        "orderDate": "2026-04-01",
+        "requiredDate": "2026-04-10",
+        "status": "Processing",
+        "customer": "/customers/119"
+    }
+    """;
 
         mockMvc.perform(post("/orders")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -97,54 +112,59 @@ public class OrderApiTest {
         mockMvc.perform(get("/orders"))
                 .andExpect(status().isOk());
     }
-//    @Test
-//    void testUpdateOrder() throws Exception {
-//
-//        String json = """
-//        {
-//            "status": "Shipped"
-//        }
-//        """;
-//
-//        mockMvc.perform(put("/orders/10150")
-//                        .contentType(MediaType.APPLICATION_JSON)
-//                        .content(json))
-//                .andExpect(status().isOk());
-//    }
+    @Test
+    void testUpdateOrderUsingPatch() throws Exception {
+        // We only send the field we want to change
+        String json = """
+    {
+        "status": "Shipped"
+    }
+    """;
+
+        // Change .put() to .patch()
+        mockMvc.perform(patch("/orders/10150")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isNoContent());
+    }
+    @Test
+    void testUpdateOrderUsingPut() throws Exception {
+        // We only send the field we want to change
+        String json = """
+            {
+              "orderNumber": 51,
+              "orderDate": "2023-01-01",
+              "requiredDate": "2023-01-10",
+              "status": "Shipped",
+              "customer": "/customers/141"
+            }
+            """;
+
+        // Change .put() to .patch()
+        mockMvc.perform(put("/orders/51")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isNoContent());
+    }
     @Test
     void testDeleteOrder() throws Exception {
 
         mockMvc.perform(delete("/orders/10150"))
                 .andExpect(status().isNoContent());
     }
-    @Test
-    void testValidationPass() throws Exception {
 
-        String json = """
-        {
-            "orderNumber": 10151,
-            "status": "Processing"
-        }
-        """;
+    // Failer Test Cases
+
+    @Test
+    void testCreateOrderFail() throws Exception {
+
+        String json = "{}";
 
         mockMvc.perform(post("/orders")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
-                .andExpect(status().isCreated());
+                .andExpect(status().isBadRequest());
     }
-
-    // Failer Test Cases
-
-//    @Test
-//    void testCreateOrderFail() throws Exception {
-//
-//        String json = "{}";
-//
-//        mockMvc.perform(post("/orders")
-//                        .contentType(MediaType.APPLICATION_JSON)
-//                        .content(json))
-//                .andExpect(status().isBadRequest());
-//    }
     @Test
     void testGetInvalidId() throws Exception {
 
@@ -163,34 +183,36 @@ public class OrderApiTest {
         mockMvc.perform(delete("/orders/99999"))
                 .andExpect(status().isNotFound());
     }
-//    @Test
-//    void testUpdateInvalid() throws Exception {
-//
-//        String json = """
-//        {
-//            "status": "Cancelled"
-//        }
-//        """;
-//
-//        mockMvc.perform(put("/orders/99999")
-//                        .contentType(MediaType.APPLICATION_JSON)
-//                        .content(json))
-//                .andExpect(status().isNotFound());
-//    }
-//    @Test
-//    void testValidationFail() throws Exception {
-//
-//        String json = """
-//        {
-//            "status": null
-//        }
-//        """;
-//
-//        mockMvc.perform(post("/orders")
-//                        .contentType(MediaType.APPLICATION_JSON)
-//                        .content(json))
-//                .andExpect(status().isBadRequest());
-//    }
+    @Test
+    void testUpdateInvalid() throws Exception {
+        String json = """
+    {
+        "status": "Cancelled"
+    }
+    """;
+
+        // Change .put() to .patch()
+        mockMvc.perform(patch("/orders/99999")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                // Expect 404 Not Found because order 99999 doesn't exist
+                .andExpect(status().isNotFound());
+    }
+    @Test
+    void testValidationFail() throws Exception {
+
+        String json = """
+    {
+        "status": null
+    }
+    """;
+
+        mockMvc.perform(post("/orders")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                // Change status().isInternalServerError() to status().isBadRequest()
+                .andExpect(status().isBadRequest());
+    }
 
     // for pagination
     @Test
@@ -199,44 +221,52 @@ public class OrderApiTest {
         mockMvc.perform(get("/orders?page=0&size=5"))
                 .andExpect(status().isOk());
     }
-//    @Test
-//    void createOrder_withValidCustomerNumber_shouldSucceed() throws Exception {
-//
-//        Customer customer = new Customer();
-//        customer.setCustomerNumber(9999);
-//        customerRepository.save(customer);
-//
-//        String orderJson = """
-//                {
-//                  "orderDate": "2023-01-01",
-//                  "requiredDate": "2023-01-10",
-//                  "status": "In Process",
-//                  "customer": "/customers/141"
-//                }
-//                """;
-//
-//        mockMvc.perform(post("/orders")
-//                        .contentType(MediaType.APPLICATION_JSON)
-//                        .content(orderJson))
-//                .andExpect(status().isCreated());
-//    }
-
-
     @Test
-    void createOrder_withInvalidCustomerNumber_shouldFail() throws Exception {
+    void createOrder_withValidCustomerNumber_shouldSucceed() throws Exception {
+        // 1. Fill EVERY mandatory field to satisfy DB constraints
+        Customer customer = new Customer();
+        customer.setCustomerNumber(119);
+        customer.setCustomerName("Test Corp");
+        customer.setContactFirstName("John"); // REQUIRED
+        customer.setContactLastName("Doe");   // LIKELY REQUIRED
+        customer.setPhone("555-1234");        // LIKELY REQUIRED
+        customer.setAddressLine1("123 Java Lane");
+        customer.setCity("Nagpur");
+        customer.setCountry("India");
+
+        customerRepository.save(customer);
 
         String orderJson = """
-                {
-                  "orderDate": "2023-01-01",
-                  "requiredDate": "2023-01-10",
-                  "status": "In Process",
-                  "customer": "/customers/99999"
-                }
-                """;
+        {
+          "orderNumber": 1001,
+          "orderDate": "2023-01-01",
+          "requiredDate": "2023-01-10",
+          "status": "In Process",
+          "customer": "/customers/119"
+        }
+        """;
+
+        // 2. Perform the POST
+        mockMvc.perform(post("/orders")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(orderJson))
+                .andExpect(status().isCreated());
+    }
+    @Test
+    void createOrder_withInvalidCustomerNumber_shouldFail() throws Exception {
+        String orderJson = """
+            {
+              "orderNumber": 999,
+              "orderDate": "2023-01-01",
+              "requiredDate": "2023-01-10",
+              "status": "In Process",
+              "customer": "/customers/99999"
+            }
+            """;
 
         mockMvc.perform(post("/orders")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(orderJson))
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isBadRequest()); // Change from isInternalServerError
     }
 }
